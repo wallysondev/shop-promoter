@@ -1,91 +1,99 @@
 import { useEffect, useState } from 'react';
-import { View, Text, FlatList, Image, ActivityIndicator, Alert, TouchableOpacity, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  FlatList,
+  Image,
+  ActivityIndicator,
+  Alert,
+  TouchableOpacity,
+  TextInput,
+} from 'react-native';
 
 import Api from '../services/api';
 import AntDesign from '@expo/vector-icons/AntDesign';
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
-
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Produto, Regiao, RootStackParamList } from '../utils/types';
 
+import { Produto, Regiao, RootStackParamList } from '../utils/types';
 import { useAuth } from '../context/AuthContext';
 
-// quando nao houver uma imagem carrega essa,
 import placeholderImg from '../../assets/not-product.png';
+import Feather from '@expo/vector-icons/Feather';
 
-// diz que posso acessar qualquer rota que estiver no rootstack type
 type NavigationProps = NativeStackNavigationProp<RootStackParamList>;
-
 
 export default function ProdutosScreen() {
   const { token } = useAuth();
-
   const route = useRoute<RouteProp<RootStackParamList, 'Produtos'>>();
   const { item: cliente, filial } = route.params;
-
-  const navigation = useNavigation();
+  const navigation = useNavigation<NavigationProps>();
 
   const [regiao, setNumregiao] = useState<Regiao | null>(null);
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filtro, setFiltro] = useState('');
+  const [abaSelecionada, setAbaSelecionada] = useState<'produtos' | 'itens'>('produtos');
+  const [itensSelecionados, setItensSelecionados] = useState<Produto[]>([]);
 
   async function fetchProdutos() {
     try {
-        // Tratativa de região 
-        if (!filial || filial === 0) {
-          Alert.alert('Atenção', 'Filial não encontrada!');
-          return; // interrompe aqui, não segue adiante
-        }
+      if (!filial || filial === 0) {
+        Alert.alert('Atenção', 'Filial não encontrada!');
+        return;
+      }
 
-        // Aqui tem que carregar pela região do cliente, essa região vai vir da praça do cliente ou se o cliente tiver região da filial do rca na 3314
-        const response = await Api.get(`/regiaocli?codcli=${cliente.codcli}&codfilial=${filial}`,{
-          headers: {
-            Authorization: `Bearer ${token}`, // ou outro prefixo, se for o caso
-          },
-        });
-        
-        // Tratativa de região 
-        if (!response.data.regiao || response.data.regiao.length === 0) {
-          Alert.alert('Atenção', 'Cliente sem região cadastrada. Verifique os dados.');
-          return; // interrompe aqui, não segue adiante
-        }
+      const response = await Api.get(`/regiaocli?codcli=${cliente.codcli}&codfilial=${filial}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-        const numregiao: Regiao = response.data.regiao[0];
-        setNumregiao(numregiao);
+      if (!response.data.regiao || response.data.regiao.length === 0) {
+        Alert.alert('Atenção', 'Cliente sem região cadastrada. Verifique os dados.');
+        return;
+      }
 
-        // Aqui tem que carregar pela região do cliente, essa região vai vir da praça do cliente ou se o cliente tiver região da filial do rca na 3314
-        const resproduto = await Api.get(`/produto?numregiao=${numregiao.numregiao}`,{
-          headers: {
-            Authorization: `Bearer ${token}`, // ou outro prefixo, se for o caso
-          },
-        });
+      const numregiao: Regiao = response.data.regiao[0];
+      setNumregiao(numregiao);
 
-        setProdutos(resproduto.data.detalhes);
+      const resproduto = await Api.get(`/produto?numregiao=${numregiao.numregiao}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
+      setProdutos(resproduto.data.detalhes);
     } catch (error) {
       if (error instanceof Error) {
-        // Aqui você tem certeza que error é Error, e pode acessar error.message
         Alert.alert('Erro ao Buscar Produtos', error.message);
       } else {
         Alert.alert('Erro', 'Erro desconhecido');
       }
-    }// finally {
-    //    setLoading(false);
-    //}
+    }
   }
 
   useEffect(() => {
     fetchProdutos();
   }, []);
 
-  const [filtro, setFiltro] = useState('');
-
-  const produtosFiltrados = produtos.filter(c =>
+  const produtosFiltrados = produtos.filter((c) =>
     c.descricao.toLowerCase().includes(filtro.toLowerCase()) ||
     c.codprod.toString().includes(filtro)
   );
+
+  function adicionarItem(produto: Produto) {
+    const jaAdicionado = itensSelecionados.find((p) => p.codprod === produto.codprod);
+    if (!jaAdicionado) {
+      setItensSelecionados([...itensSelecionados, produto]);
+    }
+  }
+
+  function removerItem(codprod: number) {
+    const novaLista = itensSelecionados.filter((item) => item.codprod !== codprod);
+    setItensSelecionados(novaLista);
+  } 
 
   if (loading) {
     return (
@@ -97,7 +105,7 @@ export default function ProdutosScreen() {
 
   return (
     <SafeAreaView className="flex-1 p-4 bg-white">
-      {/* Botão de voltar */}
+      {/* Voltar */}
       <TouchableOpacity
         className="flex-row items-center mb-4"
         onPress={() => navigation.goBack()}
@@ -110,35 +118,91 @@ export default function ProdutosScreen() {
         Cliente {cliente.cliente}
       </Text>
 
-      <View className='rounded-xl p-2'>
-        <TextInput
-          placeholder="Código, Descricão..."
-          placeholderTextColor="#9CA3AF" // mesma cor do texto do ComboBox
-          value={filtro}
-          onChangeText={setFiltro}
-          className="rounded-xl px-4 py-3 text-sm text-gray-600"
-        />
+      {/* Abas */}
+      <View className="flex-row mb-4 space-x-4">
+        <TouchableOpacity
+          className={`flex-1 p-2 rounded-full ${abaSelecionada === 'produtos' ? 'bg-blue-500' : 'bg-gray-200'}`}
+          onPress={() => setAbaSelecionada('produtos')}
+        >
+          <Text className={`text-center font-bold ${abaSelecionada === 'produtos' ? 'text-white' : 'text-gray-700'}`}>
+            Produtos
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className={`flex-1 p-2 rounded-full ${abaSelecionada === 'itens' ? 'bg-blue-500' : 'bg-gray-200'}`}
+          onPress={() => setAbaSelecionada('itens')}
+        >
+          <Text className={`text-center font-bold ${abaSelecionada === 'itens' ? 'text-white' : 'text-gray-700'}`}>
+            Itens
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      <FlatList 
-        data={produtosFiltrados}
-        keyExtractor={(item) => item.codprod.toString()}
-        renderItem={({ item }) => (
-          <View className="flex-row items-center p-3 border-b border-gray-200">
-            <Image
-              source={ item.fotoprod ? { uri: item.fotoprod } : placeholderImg }
-              style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12 }}
-              resizeMode="cover"
-            />
-            <View>
-              <Text className="font-medium text-gray-800">
-                {item.codprod} - {item.descricao}
-              </Text>
-              <Text className="text-sm text-gray-500">Preço: R$ {item.pvenda}</Text>
+      {/* Campo de filtro (somente na aba Produtos) */}
+      {abaSelecionada === 'produtos' && (
+        <View className="bg-gray-100 rounded-full p-2 w-full mb-4">
+          <TextInput
+            placeholder="Código, Descrição..."
+            placeholderTextColor="#9CA3AF"
+            value={filtro}
+            onChangeText={setFiltro}
+            className="rounded-xl px-4 py-3 text-sm text-gray-600"
+          />
+        </View>
+      )}
+
+      {/* Conteúdo das abas */}
+      {abaSelecionada === 'produtos' ? (
+        <FlatList
+          data={produtosFiltrados}
+          keyExtractor={(item) => item.codprod.toString()}
+          renderItem={({ item }) => (
+            <View className="flex-row items-center p-3 border-b border-gray-200">
+              <Image
+                source={item.fotoprod ? { uri: item.fotoprod } : placeholderImg}
+                style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12 }}
+                resizeMode="cover"
+              />
+              <View className="flex-1">
+                <Text className="font-medium text-gray-800">
+                  {item.codprod} - {item.descricao}
+                </Text>
+                <Text className="text-sm text-gray-500">Preço: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.pvenda)}</Text>
+              </View>
+              <TouchableOpacity onPress={() => adicionarItem(item)}>
+                <AntDesign name="pluscircleo" size={24} color="green" />
+              </TouchableOpacity>
             </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      ) : (
+        <FlatList
+          data={itensSelecionados}
+          keyExtractor={(item) => item.codprod.toString()}
+          ListEmptyComponent={
+            <Text className="text-gray-500 text-center mt-4">Nenhum item adicionado.</Text>
+          }
+          renderItem={({ item }) => (
+            <View className="flex-row items-center p-3 border-b border-gray-200">
+              <Image
+                source={item.fotoprod ? { uri: item.fotoprod } : placeholderImg}
+                style={{ width: 60, height: 60, borderRadius: 8, marginRight: 12 }}
+                resizeMode="cover"
+              />
+              <View className="flex-1">
+                <Text className="font-medium text-gray-800">
+                  {item.codprod} - {item.descricao}
+                </Text>
+                <Text className="text-sm text-gray-500">Preço: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.pvenda)}</Text>
+              </View>
+              <TouchableOpacity onPress={() => removerItem(item.codprod)}>
+                <Feather name="trash" size={20} color="#EF4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 }

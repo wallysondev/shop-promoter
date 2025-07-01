@@ -44,7 +44,7 @@ export default function ClientesScreen() {
 
   async function fetchCliente() {
     try {
-      const response = await Api.get('/Cliente?limit=50&offset=0',{
+      const response = await Api.get('/Cliente',{
         headers: {
           Authorization: `Bearer ${token}`, // ou outro prefixo, se for o caso
         },
@@ -85,7 +85,7 @@ export default function ClientesScreen() {
       
       <View>
         <SelectorFilial filial={filialSelecionada} setFilial={setFilialSelecionada} />
-        <View className='rounded-xl p-2'>
+        <View className='bg-gray-100 rounded-full p-2 w-full mb-4'>
           <TextInput
             placeholder="Código do cliente, Razão Social..."
             placeholderTextColor="#9CA3AF" // mesma cor do texto do ComboBox
