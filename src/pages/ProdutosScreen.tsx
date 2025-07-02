@@ -119,23 +119,29 @@ export default function ProdutosScreen() {
       </Text>
 
       {/* Abas */}
-      <View className="flex-row mb-4 space-x-4">
+      <View className="flex-row border-b border-gray-300 mb-4">
         <TouchableOpacity
-          className={`flex-1 p-2 rounded-full ${abaSelecionada === 'produtos' ? 'bg-blue-500' : 'bg-gray-200'}`}
+          className="flex-1 items-center pb-2"
           onPress={() => setAbaSelecionada('produtos')}
         >
-          <Text className={`text-center font-bold ${abaSelecionada === 'produtos' ? 'text-white' : 'text-gray-700'}`}>
+          <Text className={`font-medium text-base ${abaSelecionada === 'produtos' ? 'text-blue-600' : 'text-gray-600'}`}>
             Produtos
           </Text>
+          {abaSelecionada === 'produtos' && (
+            <View className="h-0.5 bg-blue-600 mt-1 w-16 rounded" />
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          className={`flex-1 p-2 rounded-full ${abaSelecionada === 'itens' ? 'bg-blue-500' : 'bg-gray-200'}`}
+          className="flex-1 items-center pb-2"
           onPress={() => setAbaSelecionada('itens')}
         >
-          <Text className={`text-center font-bold ${abaSelecionada === 'itens' ? 'text-white' : 'text-gray-700'}`}>
+          <Text className={`font-medium text-base ${abaSelecionada === 'itens' ? 'text-blue-600' : 'text-gray-600'}`}>
             Itens
           </Text>
+          {abaSelecionada === 'itens' && (
+            <View className="h-0.5 bg-blue-600 mt-1 w-16 rounded" />
+          )}
         </TouchableOpacity>
       </View>
 
